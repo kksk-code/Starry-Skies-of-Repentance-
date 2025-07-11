@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8B5CF6',
+                        secondary: '#8B5CF6',
+                        accent: '#EC4899',
+                        dark: '#ce98ff',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        body{
+            background-image: linear-gradient(to bottom,#081a28,#1b2947, #2b3152, #3b385d, #4c4067, #5d4771,#724c85);
+        }
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgb(255, 247, 204);
+            }
+            .text-shadow-lg {
+                text-shadow: 0 4px 8px rgba(154, 225, 255, 0.75), 0 2px 4px rgb(243, 172, 223);
+            }
+            .animate-float {
+                animation: float 6s ease-in-out infinite;
+            }
+            .animate-pulse-slow {
+                animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .backdrop-blur-xl {
+                backdrop-filter: blur(20px);
+            }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body class="font-sans bg-dark overflow-hidden h-screen">
+
+
+<!-- 主容器 -->
+<div class="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-8">
+    <!-- 标题 -->
+    <header class="w-full max-w-4xl mb-8 text-center">
+        <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-white text-shadow-lg mb-2">The Star</h1>
+        <p class="text-[clamp(1rem,2vw,1.25rem)] text-gray-300 max-w-2xl mx-auto">
+            I pray to God. Don’t tell me cause it hurts.❤
+
+        </p>
+    </header>
+
+    <!-- 星星容器 -->
+    <div id="star-container" class="absolute inset-0 z-10 pointer-events-none"></div>
+
+    <!-- 留言发布表单 -->
+    <div id="message-form-container" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-30 transition-all duration-300">
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-full p-2 shadow-xl">
+            <button id="toggle-form" class="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-full px-6 py-3 transition-all duration-300 transform hover:scale-105">
+                <i class="fa fa-pencil"></i>
+                <span>Repent to God，God will forgive you😇</span>
+            </button>
+        </div>
+
+        <div id="message-form" class="hidden mt-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-6 shadow-xl max-w-md w-full">
+            <div class="mb-4">
+                <label for="message" class="block text-white text-shadow mb-2">Your repent</label>
+                <textarea id="message" rows="4" class="w-full bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" placeholder=" Repent of your sins..."></textarea>
+            </div>
+            <div class="flex justify-between gap-3">
+                <button id="cancel-message" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 transition-all">
+                    <i class="fa fa-times mr-1"></i>Give up on repentance.
+                </button>
+                <button id="submit-message" class="flex-1 bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 transition-all">
+                    <i class="fa fa-paper-plane mr-1"></i>Post
+
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 留言卡片 -->
+    <div id="message-card" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md hidden">
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden transform transition-all duration-300 scale-95 opacity-0" id="card-content">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-white text-shadow">Content</h3>
+                    <button id="close-message" class="text-white/70 hover:text-white transition-colors">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="message-content" class="text-white/90 text-lg mb-6 min-h-[100px]"></div>
+                <div class="flex justify-between items-center text-sm text-white/60">
+                    <span id="message-time">2023-01-01 12:00</span>
+                    <button id="delete-message" class="hidden text-red-400 hover:text-red-300 transition-colors">
+                        <i class="fa fa-trash mr-1">Let it go</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 存储所有星星和留言数据
+    let stars = [];
+    let messages = [];
+
+    // DOM 元素
+    const starContainer = document.getElementById('star-container');
+    const messageFormContainer = document.getElementById('message-form-container');
+    const toggleFormBtn = document.getElementById('toggle-form');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message');
+    const submitMessageBtn = document.getElementById('submit-message');
+    const cancelMessageBtn = document.getElementById('cancel-message');
+    const messageCard = document.getElementById('message-card');
+    const cardContent = document.getElementById('card-content');
+    const messageContent = document.getElementById('message-content');
+    const messageTime = document.getElementById('message-time');
+    const closeMessageBtn = document.getElementById('close-message');
+    const deleteMessageBtn = document.getElementById('delete-message');
+
+    // 初始化页面
+    function init() {
+        // 从本地存储加载留言
+        loadMessages();
+
+        // 创建初始星星
+        createInitialStars();
+
+        // 绑定事件监听
+        bindEvents();
+    }
+
+    // 从本地存储加载留言
+    function loadMessages() {
+        const savedMessages = localStorage.getItem('starMessages');
+        if (savedMessages) {
+            messages = JSON.parse(savedMessages);
+            messages.forEach(createStarForMessage);
+        }
+    }
+
+    // 创建初始星星（没有关联留言的装饰星星）
+    function createInitialStars() {
+        const count = window.innerWidth > 768 ? 100 : 50;
+        for (let i = 0; i < count; i++) {
+            createStar();
+        }
+    }
+
+    // 创建星星元素
+    function createStar(x, y, messageId = null) {
+        const star = document.createElement('div');
+        const size = Math.random() * 3 + 1;
+        const opacity = Math.random() * 0.8 + 0.2;
+        const animationDelay = Math.random() * 5;
+        const isDecorative = messageId === null;
+
+        // 设置位置，如果未提供则随机生成
+        if (x === undefined || y === undefined) {
+            x = Math.random() * 100;
+            y = Math.random() * 100;
+        }
+
+        // 星星样式
+        star.className = `absolute rounded-full pointer-events-auto cursor-pointer animate-pulse-slow ${isDecorative ? 'z-20' : 'z-30'}`;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.backgroundColor = isDecorative ?
+            getRandomColor(['#ffffff', '#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8']) :
+            '#b04bff'; // 有留言的星星使用橙色
+        star.style.opacity = opacity;
+        star.style.left = `${x}%`;
+        star.style.top = `${y}%`;
+        star.style.animationDelay = `${animationDelay}s`;
+
+        // 添加脉动效果
+        if (Math.random() > 0.5) {
+            star.classList.add('animate-float');
+            star.style.animationDuration = `${Math.random() * 4 + 4}s`;
+        }
+
+        // 如果是有留言的星星，添加点击事件
+        if (!isDecorative) {
+            star.dataset.messageId = messageId;
+            star.addEventListener('click', () => showMessage(messageId));
+
+            // 稍微大一点，更明显
+            star.style.width = `${size + 1}px`;
+            star.style.height = `${size + 1}px`;
+        }
+
+        starContainer.appendChild(star);
+
+        // 保存星星信息
+        if (!isDecorative) {
+            stars.push({
+                element: star,
+                x: x,
+                y: y,
+                messageId: messageId
+            });
+        }
+
+        return star;
+    }
+
+    // 创建与留言关联的星星
+    function createStarForMessage(message) {
+        // 如果没有位置信息，随机生成
+        if (!message.x || !message.y) {
+            message.x = Math.random() * 100;
+            message.y = Math.random() * 100;
+            // 保存更新后的留言
+            saveMessages();
+        }
+
+        createStar(message.x, message.y, message.id);
+    }
+
+    // 获取随机颜色
+    function getRandomColor(colors) {
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // 绑定事件监听
+    function bindEvents() {
+        // 切换留言表单
+        toggleFormBtn.addEventListener('click', toggleMessageForm);
+
+        // 提交留言
+        submitMessageBtn.addEventListener('click', submitMessage);
+
+        // 取消留言
+        cancelMessageBtn.addEventListener('click', toggleMessageForm);
+
+        // 关闭留言卡片
+        closeMessageBtn.addEventListener('click', closeMessageCard);
+
+        // 删除留言
+        deleteMessageBtn.addEventListener('click', deleteCurrentMessage);
+
+        // 点击空白处关闭留言卡片
+        messageCard.addEventListener('click', (e) => {
+            if (e.target === messageCard) {
+                closeMessageCard();
+            }
+        });
+
+        // 窗口大小变化时重新分布星星
+        window.addEventListener('resize', redistributeStars);
+    }
+
+    // 切换留言表单显示/隐藏
+    function toggleMessageForm() {
+        messageForm.classList.toggle('hidden');
+
+        if (!messageForm.classList.contains('hidden')) {
+            messageInput.focus();
+            // 调整按钮文本
+            toggleFormBtn.innerHTML = '<i class="fa fa-times"></i><span>Remove</span>';
+        } else {
+            // 重置表单
+            messageInput.value = '';
+            // 恢复按钮文本
+            toggleFormBtn.innerHTML = '<i class="fa fa-pencil"></i><span>Repent of your sins...</span>';
+        }
+    }
+
+    // 提交留言
+    function submitMessage() {
+        const content = messageInput.value.trim();
+
+        if (content === '') {
+            alert('I apologize, you have committed no offenses that require forgiveness.😿');
+            return;
+        }
+
+        if (content.length > 200) {
+            alert('God will not listen to excessive nonsense... Please limit to no more than 200 words.');
+            return;
+        }
+
+        // 创建新留言
+        const newMessage = {
+            id: Date.now().toString(),
+            content: content,
+            timestamp: new Date().toLocaleString(),
+            x: Math.random() * 80 + 10, // 避免边缘位置
+            y: Math.random() * 70 + 10  // 避免边缘位置
+        };
+
+        // 添加到留言列表
+        messages.push(newMessage);
+
+        // 保存到本地存储
+        saveMessages();
+
+        // 创建对应的星星
+        createStarForMessage(newMessage);
+
+        // 隐藏表单
+        toggleMessageForm();
+
+        // 显示成功消息
+        showToast('Good child, God will forgive you...🥹');
+    }
+
+    // 保存留言到本地存储
+    function saveMessages() {
+        localStorage.setItem('starMessages', JSON.stringify(messages));
+    }
+
+    // 显示留言卡片
+    function showMessage(messageId) {
+        const message = messages.find(m => m.id === messageId);
+
+        if (!message) return;
+
+        // 填充留言内容
+        messageContent.textContent = message.content;
+        messageTime.textContent = message.timestamp;
+
+        // 检查是否是当前用户的留言（在实际应用中可能需要身份验证）
+        // 这里简化处理，假设最近30分钟内的留言可以删除
+        const messageDate = new Date(message.timestamp);
+        const now = new Date();
+        const timeDiff = (now - messageDate) / (1000 * 60); // 分钟
+
+        if (timeDiff <= 30) {
+            deleteMessageBtn.classList.remove('hidden');
+            deleteMessageBtn.dataset.messageId = messageId;
+        } else {
+            deleteMessageBtn.classList.add('hidden');
+        }
+
+        // 显示卡片
+        messageCard.classList.remove('hidden');
+
+        // 添加动画效果
+        setTimeout(() => {
+            cardContent.classList.remove('scale-95', 'opacity-0');
+            cardContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    // 关闭留言卡片
+    function closeMessageCard() {
+        // 添加关闭动画
+        cardContent.classList.remove('scale-100', 'opacity-100');
+        cardContent.classList.add('scale-95', 'opacity-0');
+
+        // 隐藏卡片
+        setTimeout(() => {
+            messageCard.classList.add('hidden');
+        }, 300);
+    }
+
+    // 删除当前显示的留言
+    function deleteCurrentMessage() {
+        const messageId = deleteMessageBtn.dataset.messageId;
+
+        if (!messageId) return;
+
+        // 从数组中删除留言
+        messages = messages.filter(m => m.id !== messageId);
+
+        // 从DOM中删除星星
+        const star = stars.find(s => s.messageId === messageId);
+        if (star && star.element) {
+            star.element.remove();
+            stars = stars.filter(s => s.messageId !== messageId);
+        }
+
+        // 更新本地存储
+        saveMessages();
+
+        // 关闭卡片
+        closeMessageCard();
+
+        // 显示成功消息
+        showToast('You have been forgiven!!😇');
+    }
+
+    // 显示提示消息
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-dark/80 text-white px-6 py-3 rounded-full shadow-lg z-50 transition-all duration-300 opacity-0';
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        // 显示动画
+        setTimeout(() => {
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+        }, 10);
+
+        // 自动隐藏
+        setTimeout(() => {
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // 重新分布星星（窗口大小变化时）
+    function redistributeStars() {
+        // 移除所有装饰性星星
+        const decorativeStars = starContainer.querySelectorAll('.z-20');
+        decorativeStars.forEach(star => star.remove());
+
+
+        createInitialStars();
+    }
+
+    // 初始化应用
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
